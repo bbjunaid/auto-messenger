@@ -1,0 +1,4 @@
+virtualenv
+auth.py
+*.pyc
+*.log
