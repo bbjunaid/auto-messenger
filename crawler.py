@@ -60,8 +60,8 @@ def main():
             try:
                 member_to_add = MemberModel.get(member['uid'])
                 if member_to_add:
-                    three_hours = 24*60*60
-                    has_time_elapsed = (time.time() - member_to_add.last_full_updated) > three_hours
+                    one_week = 7*24*60*60
+                    has_time_elapsed = (time.time() - member_to_add.last_full_updated) > one_week
 
                     if not has_time_elapsed:
                         output = u"Not updating {uid} {username} yet".format(uid=member['uid'], username=member['username'])
