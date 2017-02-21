@@ -18,3 +18,5 @@ class MemberModel(Model):
     pics = UnicodeSetAttribute(default=set())
     msgs = JSONAttribute(default=[])
     phone = UnicodeAttribute(default='')
+    last_updated = NumberAttribute(default=time.time())
+    last_full_updated = NumberAttribute(default=0)

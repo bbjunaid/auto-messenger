@@ -50,16 +50,31 @@ def main():
             print "Found {num} members".format(num=json_data['total'])
             first = False
 
-        print "\n\nAdding {num} members in this query. Members added so far {num_so_far}".format(num=len(members_to_add), num_so_far=members_added)
+        print "\n\nAdding {num} members in this query.".format(num=len(members_to_add))
         for member in members_to_add:
             time.sleep(0.5)
 
             last_logged_in, logged_in_string = _get_time_stamp_and_string(member['online_status'])
+
+            member_to_add = MemberModel.get(member['uid'])
+            if member_to_add:
+                three_hours = 24*60*60
+                has_time_elapsed = (time.time() - member_to_add.last_full_updated) > three_hours
+
+                if not has_time_elapsed:
+                    output = u"Not updating {uid} {username} yet".format(uid=member['uid'], username=member['username'])
+                    print output.encode('utf-8')
+                    member_to_add.last_logged_in_stamp = last_logged_in
+                    member_to_add.last_logged_in = logged_in_string
+                    member_to_add.save()
+                    continue
+
             member_page = requests.get(MEMBER_URL.format(uid=member['uid']), headers=HEADERS, cookies=COOKIES)
             pics = _get_member_imgs(member_page)
             msgs, phone = _get_msgs_and_phone(member_page)
 
-            print u"Adding {uid} {username}".format(uid=member['uid'], username=member['username'])
+            output = u"Adding {uid} {username}".format(uid=member['uid'], username=member['username'])
+            print output.encode('utf-8')
             member_to_add = MemberModel(member['uid'],
                                         last_logged_in_stamp=last_logged_in,
                                         last_logged_in=logged_in_string,
@@ -67,9 +82,9 @@ def main():
                                         location=member['location'],
                                         pics=pics,
                                         msgs=msgs,
-                                        phone=phone)
+                                        phone=phone,
+                                        last_full_updated=time.time())
             member_to_add.save()
-            members_added += 1
 
         time.sleep(1)
 
