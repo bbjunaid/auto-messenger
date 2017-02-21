@@ -56,22 +56,32 @@ def main():
 
             last_logged_in, logged_in_string = _get_time_stamp_and_string(member['online_status'])
 
-            member_to_add = MemberModel.get(member['uid'])
-            if member_to_add:
-                three_hours = 24*60*60
-                has_time_elapsed = (time.time() - member_to_add.last_full_updated) > three_hours
+            try:
+                member_to_add = MemberModel.get(member['uid'])
+                if member_to_add:
+                    three_hours = 24*60*60
+                    has_time_elapsed = (time.time() - member_to_add.last_full_updated) > three_hours
 
-                if not has_time_elapsed:
-                    output = u"Not updating {uid} {username} yet".format(uid=member['uid'], username=member['username'])
-                    print output.encode('utf-8')
-                    member_to_add.last_logged_in_stamp = last_logged_in
-                    member_to_add.last_logged_in = logged_in_string
-                    member_to_add.save()
-                    continue
+                    if not has_time_elapsed:
+                        output = u"Not updating {uid} {username} yet".format(uid=member['uid'], username=member['username'])
+                        print output.encode('utf-8')
+                        member_to_add.last_logged_in_stamp = last_logged_in
+                        member_to_add.last_logged_in = logged_in_string
+                        member_to_add.save()
+                        continue
+            except:
+                output = "Didn't find {uid} {username} in database".format(uid=member['uid'], username=member['username'])
+                print output.encode('utf-8')
+                pass
 
             member_page = requests.get(MEMBER_URL.format(uid=member['uid']), headers=HEADERS, cookies=COOKIES)
-            pics = _get_member_imgs(member_page)
-            msgs, phone = _get_msgs_and_phone(member_page)
+            pics, msgs, phone = [], [], ''
+
+            try:
+                pics = _get_member_imgs(member_page)
+                msgs, phone = _get_msgs_and_phone(member_page)
+            except Exception as e:
+                print e.message
 
             output = u"Adding {uid} {username}".format(uid=member['uid'], username=member['username'])
             print output.encode('utf-8')
