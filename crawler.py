@@ -15,6 +15,7 @@ from private_const import BASE_URL, SEARCH_URL, MEMBER_URL, MEMBER_PIC_URL_RE, M
 
 
 def main():
+    print "Starting"
     xsrf, laravel = get_authentication_cookies()
 
     print "XSRF: {xsrf}\n\nLARAVEL: {laravel}".format(xsrf=xsrf, laravel=laravel)
