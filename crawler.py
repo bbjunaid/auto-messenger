@@ -10,9 +10,9 @@ import phonenumbers
 import requests
 
 from cookies import get_authentication_cookies
-from const import XSRF_COOKIE, LARAVEL_COOKIE, redis_client, CACHE_KEY_LAST_SEARCH, COOKIES, HEADERS
+from const import XSRF_COOKIE, LARAVEL_COOKIE, COOKIES, HEADERS
 from models import MemberModel
-from private_const import BASE_URL, SEARCH_URL, MEMBER_URL, MEMBER_PIC_URL_RE, MEMBER_MSG_URL_RE, MEMBER_CONVO_URL_RE, MY_PHONE
+from private_const import BASE_URL, SEARCH_URL, MEMBER_URL, MEMBER_PIC_URL_RE, MEMBER_MSG_URL_RE, MEMBER_CONVO_URL, MY_PHONE
 
 
 def main():
@@ -31,7 +31,6 @@ def main():
     print "Crawling through members"
     first = True
     search_url = SEARCH_URL
-    members_added = 0
 
     while(True):
         search_response = requests.get(search_url, headers=HEADERS, cookies=COOKIES)
@@ -141,7 +140,7 @@ def _get_msgs_and_phone(member_page):
     if convo_id == '0':
         return msgs, phone
 
-    convo = requests.get(MEMBER_CONVO_URL_RE.format(convo_id=convo_id), cookies=COOKIES, headers=HEADERS)
+    convo = requests.get(MEMBER_CONVO_URL.format(convo_id=convo_id), cookies=COOKIES, headers=HEADERS)
     convo_data = json.loads(convo.content)
 
     for msg in convo_data:
@@ -163,6 +162,7 @@ def _parse_phone(msg):
         number = phonenumbers.format_number(match.number, phonenumbers.PhoneNumberFormat.E164)
         if number != MY_PHONE:
             return number
+    return ''
 
 
 if __name__ == "__main__":
