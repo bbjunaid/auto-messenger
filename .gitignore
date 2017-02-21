@@ -1,4 +1,5 @@
 virtualenv
 auth.py
+scripts/run.sh
 *.pyc
 *.log
