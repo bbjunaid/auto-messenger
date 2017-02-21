@@ -6,6 +6,7 @@ import re
 import time
 
 from bs4 import BeautifulSoup
+import phonenumbers
 import requests
 
 from cookies import get_authentication_cookies
@@ -158,18 +159,10 @@ def _get_msgs_and_phone(member_page):
 
 
 def _parse_phone(msg):
-    phone = ''
-    for s in msg:
-        if s.isdigit():
-            phone += s
-    length = len(phone)
-    if length >= 10:
-        if length > 10:
-            phone = phone[length-10:]
-        if phone != MY_PHONE:
-            pretty_phone = '{first}-{second}-{third}'.format(first=phone[:3], second=phone[3:6], third=phone[6:])
-            return pretty_phone
-    return ''
+    for match in phonenumbers.PhoneNumberMatcher(msg, "US"):
+        number = phonenumbers.format_number(match.number, phonenumbers.PhoneNumberFormat.E164)
+        if number != MY_PHONE:
+            return number
 
 
 if __name__ == "__main__":

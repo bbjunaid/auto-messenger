@@ -5,3 +5,4 @@ beautifulsoup4==4.5.3
 Flask==0.12
 boto3==1.4.4
 pynamodb==1.6.0
+phonenumbers==8.3.0
