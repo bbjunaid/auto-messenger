@@ -16,7 +16,7 @@ def main():
     num_msged = 0
 
     for member in MemberModel.scan():
-        if num_msged == 20:
+        if num_msged == 10:
             print "Finished messaging"
             return
 
