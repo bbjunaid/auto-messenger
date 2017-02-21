@@ -1,5 +1,5 @@
 virtualenv
-auth.py
+private_const.py
 scripts/run.sh
 *.pyc
 *.log
