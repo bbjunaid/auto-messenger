@@ -3,3 +3,6 @@ selenium==2.53.6
 redis==2.10.5
 beautifulsoup4==4.5.3
 Flask==0.12
+boto3==1.4.4
+configparser==2.7.13
+pynamodb==1.6.0

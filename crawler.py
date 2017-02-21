@@ -1,16 +1,17 @@
 #!/usr/bin/env python
-import json
-import re
-
-from bs4 import BeautifulSoup
 import calendar
 import datetime
-import requests
+import json
+import re
 import time
 
+from bs4 import BeautifulSoup
+import requests
+
 from cookies import get_authentication_cookies
-from const import XSRF_COOKIE, LARAVEL_COOKIE, redis_client, CACHE_KEY_MEMBERS
-from private_const import BASE_URL, SEARCH_URL, MEMBER_URL, MEMBER_PIC_URL_RE
+from const import XSRF_COOKIE, LARAVEL_COOKIE, redis_client, CACHE_KEY_LAST_SEARCH, COOKIES, HEADERS
+from models import MemberModel
+from private_const import BASE_URL, SEARCH_URL, MEMBER_URL, MEMBER_PIC_URL_RE, MEMBER_MSG_URL_RE, MEMBER_CONVO_URL_RE, MY_PHONE
 
 
 def main():
@@ -18,13 +19,8 @@ def main():
 
     print "XSRF: {xsrf}\n\nLARAVEL: {laravel}".format(xsrf=xsrf, laravel=laravel)
 
-    cookies = {
-        XSRF_COOKIE: xsrf,
-        LARAVEL_COOKIE: laravel
-    }
-    headers = {
-        'X-Requested-With': 'XMLHttpRequest'
-    }
+    COOKIES[XSRF_COOKIE] = xsrf
+    COOKIES[LARAVEL_COOKIE] = laravel
 
     if not xsrf or not laravel:
         print "Missing a token"
@@ -32,14 +28,19 @@ def main():
 
     print "Crawling through members"
     first = True
-    search_url = SEARCH_URL
+    last_search_url = redis_client.get(CACHE_KEY_LAST_SEARCH)
+    if last_search_url:
+        search_url = last_search_url
+    else:
+        search_url = SEARCH_URL
     members_added = 0
 
     while(True):
-        search_response = requests.get(search_url, headers=headers, cookies=cookies)
+        search_response = requests.get(search_url, headers=HEADERS, cookies=COOKIES)
         json_data = json.loads(search_response.content)
         members_to_add = json_data['data']['search_results']
         search_url = BASE_URL + json_data['next_page_url']
+        redis_client.set(CACHE_KEY_LAST_SEARCH, search_url)
 
         if not members_to_add:
             print "Finished crawling"
@@ -51,38 +52,102 @@ def main():
 
         print "\n\nAdding {num} members in this query. Members added so far {num_so_far}".format(num=len(members_to_add), num_so_far=members_added)
         for member in members_to_add:
-            if redis_client.sismember('members-uid', member['uid']):
-                continue
-
-            last_logged_in = member['online_status']
-            rank = 0
-            if last_logged_in not in ['Online', 'Hidden']:
-                last_logged_in = last_logged_in[:19]
-                try:
-                    last_logged_in = calendar.timegm(datetime.datetime.strptime(last_logged_in[:19], '%Y-%m-%dT%H:%M:%S').timetuple())
-                    rank = (time.time() - last_logged_in) / 3600
-                except:
-                    pass
-
             time.sleep(0.5)
-            member_page = requests.get(MEMBER_URL.format(uid=member['uid']), headers=headers, cookies=cookies)
-            src_re = re.compile(MEMBER_PIC_URL_RE)
-            imgs = BeautifulSoup(member_page.text, 'html.parser').findAll('img', attrs={'src': src_re})
-            pics = []
-            for img in imgs:
-                pics.append(img['src'])
-            member_to_add = {
-                'uid': member['uid'],
-                'username': member['username'],
-                'location': member['location'],
-                'pics': pics
-            }
-            redis_client.sadd('members-uid', member['uid'])
-            if redis_client.zadd(CACHE_KEY_MEMBERS, rank, member_to_add):
-                print u"Adding {username}\t\t{uid} {rank}".format(username=member['username'], uid=member['uid'], rank=round(rank, 4))
-                members_added += 1
+
+            last_logged_in, logged_in_string = _get_time_stamp_and_string(member['online_status'])
+            member_page = requests.get(MEMBER_URL.format(uid=member['uid']), headers=HEADERS, cookies=COOKIES)
+            pics = _get_member_imgs(member_page)
+            msgs, phone = _get_msgs_and_phone(member_page)
+
+            # try:
+            #     MemberModel.get(member['uid'])
+            #     print u"Member {uid} {username} already exists".format(uid=member['uid'], username=member['username'])
+            # except:
+            print u"Adding {uid} {username}".format(uid=member['uid'], username=member['username'])
+            member_to_add = MemberModel(member['uid'],
+                                        last_logged_in_stamp=last_logged_in,
+                                        last_logged_in=logged_in_string,
+                                        username=member['username'],
+                                        location=member['location'],
+                                        pics=pics,
+                                        msgs=msgs,
+                                        phone=phone)
+            member_to_add.save()
+            members_added += 1
 
         time.sleep(1)
+
+
+def _get_time_stamp_and_string(last_logged_in):
+    string = last_logged_in
+    if last_logged_in in ['Online', 'Hidden']:
+        last_logged_in = time.time()
+    else:
+        last_logged_in = last_logged_in[:19]
+        string = last_logged_in
+        try:
+            last_logged_in = calendar.timegm(datetime.datetime.strptime(last_logged_in[:19], '%Y-%m-%dT%H:%M:%S').timetuple())
+        except:
+            last_logged_in = time.time()
+            pass
+    return last_logged_in, string
+
+
+def _get_member_imgs(member_page):
+    member_page_bs = BeautifulSoup(member_page.text, 'html.parser')
+    src_re = re.compile(MEMBER_PIC_URL_RE)
+    imgs = member_page_bs.findAll('img', attrs={'src': src_re})
+    pics = []
+    for img in imgs:
+        pics.append(img['src'])
+
+    return pics
+
+
+def _get_msgs_and_phone(member_page):
+    member_page_bs = BeautifulSoup(member_page.text, 'html.parser')
+    msg_re = re.compile(MEMBER_MSG_URL_RE)
+    msg_url = member_page_bs.find('a', attrs={'href': msg_re})['href']
+
+    msgs_page = requests.get(msg_url, cookies=COOKIES, headers=HEADERS)
+    m = re.search(r".*var conversationId = (\d+);.*", msgs_page.text)
+    convo_id = m.group(1)
+    msgs = []
+    phone = ''
+
+    if convo_id == '0':
+        return msgs, phone
+
+    convo = requests.get(MEMBER_CONVO_URL_RE.format(convo_id=convo_id), cookies=COOKIES, headers=HEADERS)
+    convo_data = json.loads(convo.content)
+
+    for msg in convo_data:
+        _, string = _get_time_stamp_and_string(msg['created_at'])
+        msg_item = {
+            'username': msg['author']['username'],
+            'msg': msg['body'],
+            'created_at': string
+        }
+        msgs.append(msg_item)
+        if not phone:
+            phone = _parse_phone(msg['body'])
+
+    return msgs, phone
+
+
+def _parse_phone(msg):
+    phone = ''
+    for s in msg:
+        if s.isdigit():
+            phone += s
+    length = len(phone)
+    if length >= 10:
+        if length > 10:
+            phone = phone[length-10:]
+        if phone != MY_PHONE:
+            pretty_phone = '{first}-{second}-{third}'.format(first=phone[:3], second=phone[3:6], third=phone[6:])
+            return pretty_phone
+    return ''
 
 
 if __name__ == "__main__":
