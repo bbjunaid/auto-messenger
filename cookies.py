@@ -34,7 +34,7 @@ def get_authentication_cookies(force_refresh=False):
     return token, laravel
 
 
-def populate_cookies_dict(cookies):
-    xsrf, laravel = get_authentication_cookies(force_refresh=True)
+def populate_cookies_dict(cookies, force_refresh=False):
+    xsrf, laravel = get_authentication_cookies(force_refresh)
     cookies[XSRF_COOKIE] = xsrf
     cookies[LARAVEL_COOKIE] = laravel
