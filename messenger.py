@@ -40,6 +40,7 @@ def main():
                 _send_msg(member, random.choice(ENGAGE_AFTER_CLOSE))
             else:
                 _print(u"Skipping {uid} {username} because {reason}".format(uid=member.uid, username=member.username, reason=reason))
+                _update_msgs(member)
                 continue
 
         except Exception as e:
