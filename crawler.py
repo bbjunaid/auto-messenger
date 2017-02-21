@@ -28,19 +28,19 @@ def main():
 
     print "Crawling through members"
     first = True
-    last_search_url = redis_client.get(CACHE_KEY_LAST_SEARCH)
-    if last_search_url:
-        search_url = last_search_url
-    else:
-        search_url = SEARCH_URL
+    search_url = SEARCH_URL
     members_added = 0
 
     while(True):
         search_response = requests.get(search_url, headers=HEADERS, cookies=COOKIES)
         json_data = json.loads(search_response.content)
         members_to_add = json_data['data']['search_results']
+
+        if not members_to_add:
+            print "Finished crawling"
+            break
+
         search_url = BASE_URL + json_data['next_page_url']
-        redis_client.set(CACHE_KEY_LAST_SEARCH, search_url)
 
         if not members_to_add:
             print "Finished crawling"
@@ -59,10 +59,6 @@ def main():
             pics = _get_member_imgs(member_page)
             msgs, phone = _get_msgs_and_phone(member_page)
 
-            # try:
-            #     MemberModel.get(member['uid'])
-            #     print u"Member {uid} {username} already exists".format(uid=member['uid'], username=member['username'])
-            # except:
             print u"Adding {uid} {username}".format(uid=member['uid'], username=member['username'])
             member_to_add = MemberModel(member['uid'],
                                         last_logged_in_stamp=last_logged_in,
