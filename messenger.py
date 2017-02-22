@@ -30,22 +30,25 @@ def main():
                 print state
                 num_msged += 1
 
-            if state == STATE_OPEN:
-                _send_msg(member, random.choice(OPEN))
-            elif state == STATE_CLOSE:
-                _send_msg(member, random.choice(CLOSE))
-            elif state == STATE_ENGAGE:
-                _send_msg(member, random.choice(ENGAGE))
-            elif state == STATE_ENGAGE_AFTER_CLOSE:
-                _send_msg(member, random.choice(ENGAGE_AFTER_CLOSE))
-            else:
-                _print(u"Skipping {uid} {username} because {reason}".format(uid=member.uid, username=member.username, reason=reason))
-                _update_msgs(member)
-                continue
+            _state_machine_action(member, state, reason)
 
         except Exception as e:
             print e.message
             _print(u"Problem with member {uid} {username}".format(uid=member.uid, username=member.username))
+
+
+def _state_machine_action(member, state, reason):
+    if state == STATE_OPEN:
+        _send_msg(member, random.choice(OPEN))
+    elif state == STATE_CLOSE:
+        _send_msg(member, random.choice(CLOSE))
+    elif state == STATE_ENGAGE:
+        _send_msg(member, random.choice(ENGAGE))
+    elif state == STATE_ENGAGE_AFTER_CLOSE:
+        _send_msg(member, random.choice(ENGAGE_AFTER_CLOSE))
+    else:
+        _print(u"Skipping {uid} {username} because {reason}".format(uid=member.uid, username=member.username, reason=reason))
+        _update_msgs(member)
 
 
 def _state_machine(msgs, phone):
@@ -71,6 +74,7 @@ def _state_machine(msgs, phone):
         return None, reason
 
     current_state = None
+    engage_after_close_count = 0
     for msg in msgs:
         if msg['msg'] in OPEN:
             current_state = STATE_OPEN
@@ -78,10 +82,13 @@ def _state_machine(msgs, phone):
             current_state = STATE_CLOSE
         if msg['msg'] in ENGAGE:
             current_state = STATE_ENGAGE
+        if msg['msg'] in ENGAGE_AFTER_CLOSE:
+            current_state = ENGAGE_AFTER_CLOSE
+            engage_after_close_count += 1
 
     if phone:
         waiting_time = 5*24*60*60
-        if _has_time_passed(last_msg_time, waiting_time):
+        if _has_time_passed(last_msg_time, waiting_time) and engage_after_close_count < 3:
             return STATE_ENGAGE_AFTER_CLOSE, reason
         else:
             return None, 'got number but not enough time has passed'
