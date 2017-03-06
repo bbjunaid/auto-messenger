@@ -1,5 +1,5 @@
 # auto-messenger
-Auto messaging for a social network
+Auto messaging for a social site
 
 - Setup virtualenv:
 
