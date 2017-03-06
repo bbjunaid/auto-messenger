@@ -18,7 +18,19 @@ Install PhantomJS and Redis and run redis as deamon:
     brew install phantomjs
     brew install redis
     /usr/local/bin/redis-server --daemonize yes
+    
+Setup DyanmoDB in aws with a 'members' table and primary key 'uid'
 
-Run the script:
+Store aws credentials in a file:
 
+    ~/.aws/credentials
+
+Run the scripts:
+
+    python crawler.py
     python messenger.py
+    python replier.py
+
+Future work:
+- Add location library to store nearest major city
+- Incorporate machine learning/NLP based on pictures and messages
