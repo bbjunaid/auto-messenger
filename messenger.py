@@ -16,7 +16,7 @@ def main():
     num_msged = 0
 
     for member in MemberModel.scan():
-        if num_msged == 10:
+        if num_msged == 40:
             print "Finished messaging"
             return
 
@@ -27,14 +27,16 @@ def main():
             state, reason = _state_machine(msgs, phone)
 
             if state:
-                print state
+                print state, num_msged
                 num_msged += 1
 
             _state_machine_action(member, state, reason)
+            _update_msgs(member, msgs, phone)
 
         except Exception as e:
             print e.message
-            _print(u"Problem with member {uid} {username}".format(uid=member.uid, username=member.username))
+            _print(u"Problem with member {uid} {username}. Deleting".format(uid=member.uid, username=member.username))
+            member.delete()
 
 
 def _state_machine_action(member, state, reason):
@@ -48,7 +50,6 @@ def _state_machine_action(member, state, reason):
         _send_msg(member, random.choice(ENGAGE_AFTER_CLOSE))
     else:
         _print(u"Skipping {uid} {username} because {reason}".format(uid=member.uid, username=member.username, reason=reason))
-        _update_msgs(member)
 
 
 def _state_machine(msgs, phone):
@@ -105,7 +106,7 @@ def _has_time_passed(last_msg_time, waiting_time):
 
 
 def _send_msg(member, msg):
-    time.sleep(1)
+    time.sleep(random.randint(1,6))
     data = {
         'member_uid': member.uid,
         'body': msg
@@ -113,15 +114,13 @@ def _send_msg(member, msg):
     try:
         requests.post(MSG_URL, data=data, cookies=COOKIES, headers=HEADERS)
         _print(u"Sent {msg} to {uid} {username}".format(msg=msg, uid=member.uid, username=member.username))
-        _update_msgs(member)
     except Exception as e:
         print e.message
         _print(u"Couldn't send message to {uid} {username}".format(uid=member.uid, username=member.username))
 
 
-def _update_msgs(member):
+def _update_msgs(member, msgs, phone):
     try:
-        msgs, phone = _get_msgs_and_phone(member.uid)
         member.msgs = msgs
         member.phone = phone
         member.save()
