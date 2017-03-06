@@ -1,31 +1,31 @@
 # auto-messenger
 Auto messaging for a social network
 
-Setup virtualenv:
+- Setup virtualenv:
 
     ./scripts/setup.sh
   
-Activate virtualenv:
+- Activate virtualenv:
 
     . virtualenv/bin/activate
   
-Fill the private_const.py
+- Fill the private_const.py
 
     private_const.py
 
-Install PhantomJS and Redis and run redis as deamon:
+- Install PhantomJS and Redis and run redis as deamon:
 
     brew install phantomjs
     brew install redis
     /usr/local/bin/redis-server --daemonize yes
     
-Setup DyanmoDB in aws with a 'members' table and primary key 'uid'
+- Setup DyanmoDB in aws with a 'members' table and primary key 'uid'
 
-Store aws credentials in a file:
+- Store aws credentials in a file:
 
     ~/.aws/credentials
 
-Run the scripts:
+- Run the scripts:
 
     python crawler.py
     python messenger.py
