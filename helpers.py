@@ -7,9 +7,10 @@ import time
 import phonenumbers
 import requests
 
-from private_const import MEMBER_MSG_URL, MEMBER_CONVO_URL, MY_PHONE
 from const import COOKIES, HEADERS, XSRF_COOKIE
 from cookies import populate_cookies_dict
+from models import MemberModel
+from private_const import MEMBER_MSG_URL, MEMBER_CONVO_URL, MY_PHONE
 
 
 def _get_msgs_and_phone(member_uid):
@@ -20,6 +21,16 @@ def _get_msgs_and_phone(member_uid):
     phone = ''
 
     msgs_page = requests.get(MEMBER_MSG_URL.format(uid=member_uid), cookies=COOKIES, headers=HEADERS)
+    is_blocked = not bool(re.search('<div id="divBlock" class="u-textCenter"  style="display: none;"', msgs_page.content))
+
+    if is_blocked:
+        "Deleting blocked member from db"
+        try:
+            member = MemberModel.get(member_uid)
+            member.delete()
+        except Exception:
+            pass
+
     m = re.search('var conversationId = (\d+);', msgs_page.content)
     convo_id = m.group(1)
 

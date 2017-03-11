@@ -28,18 +28,17 @@ def main():
 
     print "Crawling through members"
     first = True
-    search_url = SEARCH_URL
+    page = 1
 
     while(True):
-        search_response = requests.get(search_url, headers=HEADERS, cookies=COOKIES)
+        search_response = requests.get(SEARCH_URL.format(page=page), headers=HEADERS, cookies=COOKIES)
+        page += 1
         json_data = json.loads(search_response.content)
         members_to_add = json_data['data']['search_results']
 
         if not members_to_add:
             print "Finished crawling"
             break
-
-        search_url = BASE_URL + json_data['next_page_url']
 
         if not members_to_add:
             print "Finished crawling"
