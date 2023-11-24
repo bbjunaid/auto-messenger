@@ -1,3 +1,4 @@
+import sys
 import random
 import time
 
@@ -11,12 +12,14 @@ from models import MemberModel
 
 
 def main():
+    msg_limit = int(sys.argv[1])
+
     print "Starting messenger...scanning db"
     populate_cookies_dict(COOKIES)
     num_msged = 0
 
     for member in MemberModel.scan():
-        if num_msged == 40:
+        if num_msged == msg_limit:
             print "Finished messaging"
             return
 
